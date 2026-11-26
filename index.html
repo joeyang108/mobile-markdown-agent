@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MMA">
+  <meta name="theme-color" content="#09090b">
+  <link rel="manifest" href="./manifest.json">
+  <title>MMA — Mobile Markdown Agent</title>
+  <style>
+    :root {
+      --bg: #09090b;
+      --card-bg: #18181b;
+      --border: #27272a;
+      --text: #f4f4f5;
+      --text-muted: #a1a1aa;
+      --accent: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.15);
+      --success: #10b981;
+      --purple: #a855f7;
+      --danger: #ef4444;
+      --font-system: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: var(--font-system);
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding-top: env(safe-area-inset-top, 20px);
+      padding-bottom: env(safe-area-inset-bottom, 20px);
+      overflow-x: hidden;
+    }
+
+    /* Header */
+    header {
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      background: rgba(9, 9, 11, 0.85);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 1.05rem;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-badge {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--accent);
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-family: monospace;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    select.repo-select {
+      background: var(--card-bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      outline: none;
+      max-width: 170px;
+      text-overflow: ellipsis;
+    }
+
+    button.icon-btn {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    button.icon-btn:active {
+      transform: scale(0.95);
+      background: #27272a;
+    }
+
+    /* Context Pills Bar (Strategy A + B) */
+    .context-bar {
+      padding: 8px 16px;
+      background: #121215;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow-x: auto;
+      white-space: nowrap;
+      scrollbar-width: none;
+    }
+    .context-bar::-webkit-scrollbar { display: none; }
+
+    .context-label {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+      margin-right: 2px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-family: monospace;
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      color: var(--text-muted);
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.15s ease;
+    }
+
+    .pill.active {
+      background: rgba(56, 189, 248, 0.12);
+      border-color: rgba(56, 189, 248, 0.4);
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .pill:active { transform: scale(0.96); }
+
+    /* Mode Navigation Tabs */
+    .mode-nav {
+      display: flex;
+      padding: 10px 16px;
+      gap: 8px;
+      background: var(--bg);
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .tab-btn.active {
+      background: #27272a;
+      color: #fff;
+      border-color: #3f3f46;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    }
+
+    /* Main Viewports */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 0 16px 16px 16px;
+      max-width: 680px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .view { display: none; flex-direction: column; flex: 1; }
+    .view.active { display: flex; }
+
+    /* Quick Note View */
+    .form-group {
+      margin-bottom: 12px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+
+    input.input-text, select.input-select {
+      width: 100%;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px 14px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      outline: none;
+    }
+
+    input.input-text:focus, select.input-select:focus, textarea.input-area:focus {
+      border-color: var(--accent);
+    }
+
+    textarea.input-area {
+      width: 100%;
+      flex: 1;
+      min-height: 240px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 14px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      font-family: inherit;
+      outline: none;
+      resize: vertical;
+    }
+
+    .btn-action {
+      background: var(--accent);
+      color: #041018;
+      border: none;
+      padding: 14px;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      margin-top: 12px;
+      box-shadow: 0 4px 14px rgba(56, 189, 248, 0.25);
+    }
+    .btn-action:active { transform: scale(0.98); opacity: 0.9; }
+    .btn-action:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Design Debater View */
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 380px;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0 16px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .chat-msg {
+      max-width: 90%;
+      padding: 12px 14px;
+      border-radius: 14px;
+      font-size: 0.92rem;
+      line-height: 1.45;
+      word-break: break-word;
+    }
+
+    .chat-msg.user {
+      align-self: flex-end;
+      background: #27272a;
+      color: var(--text);
+      border-bottom-right-radius: 4px;
+    }
+
+    .chat-msg.agent {
+      align-self: flex-start;
+      background: #141419;
+      border: 1px solid #2d2d38;
+      color: #e4e4e7;
+      border-bottom-left-radius: 4px;
+    }
+
+    .chat-msg.system {
+      align-self: center;
+      background: rgba(255,255,255,0.04);
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      border-radius: 8px;
+      padding: 6px 12px;
+    }
+
+    .agent-tag {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--purple);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .chat-actions-bar {
+      display: flex;
+      gap: 8px;
+      padding: 8px 0;
+    }
+
+    .btn-secondary {
+      flex: 1;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+    .btn-secondary:active { transform: scale(0.97); }
+
+    .chat-input-bar {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 8px 10px;
+    }
+
+    .chat-textarea {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-size: 0.95rem;
+      outline: none;
+      resize: none;
+      max-height: 120px;
+      font-family: inherit;
+      line-height: 1.4;
+    }
+
+    .btn-send {
+      background: var(--purple);
+      color: white;
+      border: none;
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .btn-send:disabled { opacity: 0.3; }
+
+    /* Compiled Spec Preview Modal / Drawer */
+    .spec-drawer {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      padding: 20px;
+      align-items: center;
+      justify-content: center;
+    }
+    .spec-drawer.active { display: flex; }
+
+    .spec-card {
+      background: #18181b;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 540px;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .spec-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .spec-body {
+      padding: 16px;
+      overflow-y: auto;
+      font-size: 0.88rem;
+      line-height: 1.5;
+      color: #e4e4e7;
+    }
+
+    .spec-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 10px;
+    }
+
+    /* Alerts */
+    .alert {
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      margin-bottom: 12px;
+      display: none;
+    }
+    .alert.success { display: block; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; }
+    .alert.error { display: block; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; }
+    .alert a { color: inherit; text-decoration: underline; }
+
+    /* Settings Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 99;
+      padding: 20px;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal.active { display: flex; }
+    .modal-box {
+      background: #18181b;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      width: 100%;
+      max-width: 480px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <span>MMA</span>
+      <span class="brand-badge" id="ownerBadge">joeyang108</span>
+    </div>
+
+    <div class="header-actions">
+      <select id="repoSelect" class="repo-select">
+        <option value="Deep-Song-Explorer">Deep-Song-Explorer</option>
+        <option value="NFL-Deep-Reader">NFL-Deep-Reader</option>
+        <option value="Health-App-42">Health-App-42</option>
+        <option value="vibe-coding-partner">vibe-coding-partner</option>
+        <option value="mobile-markdown-agent" selected>mobile-markdown-agent</option>
+        <option value="_custom">+ Custom Repo...</option>
+      </select>
+
+      <button id="btnSettings" class="icon-btn" title="Settings">⚙️</button>
+    </div>
+  </header>
+
+  <!-- Context Pills Bar (Strategy A + B) -->
+  <div class="context-bar" id="contextBar">
+    <span class="context-label">Context:</span>
+    <span class="pill active" data-file="README.md" title="Repo overview">✓ README.md</span>
+    <span class="pill active" data-file="GEMINI.md" title="Workspace rules & guardrails">✓ GEMINI.md</span>
+    <span class="pill active" data-file="backlog" title="Active backlog or designs">✓ backlog/designs</span>
+  </div>
+
+  <!-- Mode Navigation -->
+  <nav class="mode-nav">
+    <button class="tab-btn active" id="tabQuick" onclick="switchTab('quick')">
+      ⚡ Quick Note
+    </button>
+    <button class="tab-btn" id="tabDebate" onclick="switchTab('debate')">
+      💬 Design Debater
+    </button>
+  </nav>
+
+  <!-- Main Viewports -->
+  <main>
+    <div id="statusAlert" class="alert"></div>
+
+    <!-- 1. Quick Note View -->
+    <section id="viewQuick" class="view active">
+      <div class="form-group">
+        <label class="form-label">Title / Feature Slug</label>
+        <input type="text" id="quickTitle" class="input-text" placeholder="e.g. Scrubber Haptic Feedback" />
+      </div>
+
+      <div class="form-group" style="display: flex; gap: 8px;">
+        <div style="flex: 1;">
+          <label class="form-label">Directory</label>
+          <select id="quickDir" class="input-select">
+            <option value="ideation" selected>ideation/</option>
+            <option value="designs">designs/</option>
+            <option value="notes">notes/</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group" style="flex: 1; display: flex; flex-direction: column;">
+        <label class="form-label">Markdown Body (Dictation friendly)</label>
+        <textarea id="quickBody" class="input-area" placeholder="Jot down the design thought, UI friction point, or sprint idea..."></textarea>
+      </div>
+
+      <button id="btnCommitQuick" class="btn-action">
+        🚀 Push to GitHub
+      </button>
+    </section>
+
+    <!-- 2. Design Debater View -->
+    <section id="viewDebate" class="view">
+      <div class="chat-container">
+        <div class="chat-messages" id="chatMessages">
+          <div class="chat-msg agent">
+            <div class="agent-tag">🤖 Design Debater</div>
+            Ready to debate designs for <b id="debateRepoDisplay">mobile-markdown-agent</b>. 
+            Tell me what UI issue, feature idea, or error state you want to critique. I will poke holes, challenge complexity, and protect your user experience.
+          </div>
+        </div>
+
+        <div class="chat-actions-bar">
+          <button id="btnCompileSpec" class="btn-secondary">
+            📝 Compile Spec
+          </button>
+          <button id="btnClearChat" class="btn-secondary" style="flex: 0 0 auto;">
+            🧹 Clear
+          </button>
+        </div>
+
+        <div class="chat-input-bar">
+          <textarea id="chatInput" class="chat-textarea" rows="1" placeholder="Debate UI, flow, error handling..."></textarea>
+          <button id="btnSendChat" class="btn-send">➔</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Compiled Spec Drawer -->
+  <div class="spec-drawer" id="specDrawer">
+    <div class="spec-card">
+      <div class="spec-header">
+        <h3 style="font-size: 1rem;">Synthesized Design Spec</h3>
+        <button class="icon-btn" onclick="closeSpecDrawer()">✕</button>
+      </div>
+      <div class="spec-body" id="specContent"></div>
+      <div class="spec-footer">
+        <button class="btn-action" id="btnCommitSpec" style="flex: 1; margin: 0;">
+          🚀 Commit Spec to Repo
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal" id="settingsModal">
+    <div class="modal-box">
+      <h3 style="margin-bottom: 14px; font-size: 1.1rem;">MMA Configuration</h3>
+      
+      <div class="form-group">
+        <label class="form-label">GitHub Personal Access Token (PAT)</label>
+        <input type="password" id="inputGithubPat" class="input-text" placeholder="ghp_... or github_pat_..." />
+        <span style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-top: 4px;">
+          Needs <code>Contents: Read & Write</code> permission.
+        </span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Google Gemini API Key</label>
+        <input type="password" id="inputGeminiKey" class="input-text" placeholder="AIzaSy..." />
+        <span style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-top: 4px;">
+          Powers Gemini 2.0 Flash Design Debater.
+        </span>
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-top: 18px;">
+        <button class="btn-action" id="btnSaveSettings" style="flex: 1; margin: 0;">Save Settings</button>
+        <button class="btn-secondary" onclick="closeSettingsModal()" style="flex: 0 0 80px;">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State
+    const CONFIG = {
+      owner: 'joeyang108',
+      repo: localStorage.getItem('mma_repo') || 'mobile-markdown-agent',
+      githubPat: localStorage.getItem('mma_github_pat') || '',
+      geminiKey: localStorage.getItem('mma_gemini_key') || ''
+    };
+
+    let chatHistory = [];
+    let repoContextCache = {};
+    let compiledSpecMarkdown = '';
+
+    // Auto-parse URL params for instant 1-click configuration
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('gh')) {
+      CONFIG.githubPat = urlParams.get('gh');
+      localStorage.setItem('mma_github_pat', CONFIG.githubPat);
+    }
+    if (urlParams.has('gemini')) {
+      CONFIG.geminiKey = urlParams.get('gemini');
+      localStorage.setItem('mma_gemini_key', CONFIG.geminiKey);
+    }
+    if (urlParams.has('gh') || urlParams.has('gemini')) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    // Elements
+    const repoSelect = document.getElementById('repoSelect');
+    const debateRepoDisplay = document.getElementById('debateRepoDisplay');
+    const statusAlert = document.getElementById('statusAlert');
+    const contextBar = document.getElementById('contextBar');
+
+    // Init Repo Selector
+    if (repoSelect) {
+      if ([...repoSelect.options].some(o => o.value === CONFIG.repo)) {
+        repoSelect.value = CONFIG.repo;
+      } else {
+        const opt = new Option(CONFIG.repo, CONFIG.repo, true, true);
+        repoSelect.add(opt, 0);
+      }
+      repoSelect.addEventListener('change', (e) => {
+        if (e.target.value === '_custom') {
+          const custom = prompt('Enter GitHub repository name under joeyang108:');
+          if (custom && custom.trim()) {
+            CONFIG.repo = custom.trim();
+            const opt = new Option(CONFIG.repo, CONFIG.repo, true, true);
+            repoSelect.add(opt, 0);
+          } else {
+            repoSelect.value = CONFIG.repo;
+            return;
+          }
+        } else {
+          CONFIG.repo = e.target.value;
+        }
+        localStorage.setItem('mma_repo', CONFIG.repo);
+        debateRepoDisplay.textContent = CONFIG.repo;
+        loadRepoContextPills();
+      });
+    }
+
+    // Context Pills (Strategy A + B)
+    function setupContextPills() {
+      contextBar.querySelectorAll('.pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+          pill.classList.toggle('active');
+          if (pill.classList.contains('active')) {
+            pill.textContent = '✓ ' + pill.dataset.file;
+          } else {
+            pill.textContent = '○ ' + pill.dataset.file;
+          }
+        });
+      });
+    }
+    setupContextPills();
+
+    // Fetch repository context files (README, GEMINI, etc.) via GitHub REST API
+    async function fetchFileContent(filePath) {
+      if (!CONFIG.githubPat) return null;
+      try {
+        const res = await fetch(`https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${filePath}`, {
+          headers: {
+            'Authorization': `Bearer ${CONFIG.githubPat}`,
+            'Accept': 'application/vnd.github.v3+json'
+          }
+        });
+        if (!res.ok) return null;
+        const data = await res.json();
+        return decodeURIComponent(escape(atob(data.content.replace(/\s/g, ''))));
+      } catch (err) {
+        console.warn(`Failed to fetch ${filePath}:`, err);
+        return null;
+      }
+    }
+
+    async function loadRepoContextPills() {
+      repoContextCache = {};
+      const pills = contextBar.querySelectorAll('.pill');
+      for (const pill of pills) {
+        const file = pill.dataset.file;
+        let content = null;
+        if (file === 'backlog') {
+          // Probe backlog or designs
+          content = await fetchFileContent('backlog/backlog.md') || await fetchFileContent('designs/001-architecture-triad.md');
+        } else {
+          content = await fetchFileContent(file);
+        }
+        if (content) {
+          repoContextCache[file] = content;
+          pill.style.display = 'inline-flex';
+        } else {
+          // Keep pill visible but dimmer if not found
+          pill.style.opacity = '0.5';
+        }
+      }
+    }
+
+    // Switch Tabs
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      
+      if (tab === 'quick') {
+        document.getElementById('tabQuick').classList.add('active');
+        document.getElementById('viewQuick').classList.add('active');
+      } else {
+        document.getElementById('tabDebate').classList.add('active');
+        document.getElementById('viewDebate').classList.add('active');
+      }
+    }
+
+    // Notification Alert
+    function showAlert(msg, isSuccess = true, linkUrl = null) {
+      statusAlert.className = `alert ${isSuccess ? 'success' : 'error'}`;
+      if (linkUrl) {
+        statusAlert.innerHTML = `${msg} <a href="${linkUrl}" target="_blank">View on GitHub ↗</a>`;
+      } else {
+        statusAlert.textContent = msg;
+      }
+      setTimeout(() => { statusAlert.style.display = 'none'; }, 8000);
+    }
+
+    // GitHub Commit helper (Creates new file atomically)
+    async function commitToGitHub(path, content, commitMsg) {
+      if (!CONFIG.githubPat) {
+        openSettingsModal();
+        throw new Error('Please configure your GitHub Personal Access Token.');
+      }
+
+      const encoded = btoa(unescape(encodeURIComponent(content)));
+      const url = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${path}`;
+
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${CONFIG.githubPat}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message: commitMsg,
+          content: encoded,
+          branch: 'main'
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'GitHub commit failed');
+      }
+
+      return await res.json();
+    }
+
+    // 1. Quick Note Commit
+    document.getElementById('btnCommitQuick').addEventListener('click', async () => {
+      const titleInput = document.getElementById('quickTitle');
+      const bodyInput = document.getElementById('quickBody');
+      const dirSelect = document.getElementById('quickDir');
+
+      const title = titleInput.value.trim();
+      const body = bodyInput.value.trim();
+      const dir = dirSelect.value;
+
+      if (!title || !body) {
+        alert('Please enter a title and some notes before committing.');
+        return;
+      }
+
+      const btn = document.getElementById('btnCommitQuick');
+      btn.disabled = true;
+      btn.textContent = '⏳ Committing...';
+
+      try {
+        const now = new Date();
+        const dateStr = now.toISOString().slice(0, 10);
+        const timeStr = now.toTimeString().slice(0, 5).replace(':', '');
+        const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        const filename = `${dateStr}-${timeStr}-${slug}.md`;
+        const path = `${dir}/${filename}`;
+
+        const markdown = `# ${title}\n\n- **Date:** ${now.toISOString()}\n- **Author:** Joey (Mobile Markdown Agent)\n- **Target Repo:** ${CONFIG.owner}/${CONFIG.repo}\n\n---\n\n${body}\n`;
+        const commitMsg = `docs(mobile): capture ${title} [${dateStr}]`;
+
+        const result = await commitToGitHub(path, markdown, commitMsg);
+        showAlert(`Committed ${path} to ${CONFIG.repo}!`, true, result.content?.html_url);
+        
+        // Clear inputs on success
+        titleInput.value = '';
+        bodyInput.value = '';
+        if (navigator.vibrate) navigator.vibrate([20, 50, 20]);
+      } catch (err) {
+        showAlert(err.message, false);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '🚀 Push to GitHub';
+      }
+    });
+
+    // 2. Design Debater Engine
+    async function callGemini(messages, systemInstruction) {
+      if (!CONFIG.geminiKey) {
+        openSettingsModal();
+        throw new Error('Please configure your Gemini API Key in Settings.');
+      }
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${CONFIG.geminiKey}`;
+
+      const contents = messages.map(m => ({
+        role: m.role === 'agent' ? 'model' : 'user',
+        parts: [{ text: m.text }]
+      }));
+
+      const body = {
+        contents,
+        systemInstruction: {
+          parts: [{ text: systemInstruction }]
+        },
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 1200
+        }
+      };
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error?.message || 'Gemini API call failed');
+      }
+
+      const data = await res.json();
+      return data.candidates?.[0]?.content?.parts?.[0]?.text || '(No response from Gemini)';
+    }
+
+    function appendMessage(role, text) {
+      const container = document.getElementById('chatMessages');
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `chat-msg ${role}`;
+      
+      if (role === 'agent') {
+        msgDiv.innerHTML = `<div class="agent-tag">🤖 Design Debater</div><div>${escapeHtml(text).replace(/\n/g, '<br/>')}</div>`;
+      } else {
+        msgDiv.textContent = text;
+      }
+
+      container.appendChild(msgDiv);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    async function sendChatMessage() {
+      const input = document.getElementById('chatInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      input.value = '';
+      appendMessage('user', text);
+      chatHistory.push({ role: 'user', text });
+
+      const sendBtn = document.getElementById('btnSendChat');
+      sendBtn.disabled = true;
+
+      // Build system prompt with selected context pills
+      let activeContext = `Current Target Project: ${CONFIG.owner}/${CONFIG.repo}\n\n`;
+      contextBar.querySelectorAll('.pill.active').forEach(p => {
+        const fileKey = p.dataset.file;
+        if (repoContextCache[fileKey]) {
+          activeContext += `--- Context File: ${fileKey} ---\n${repoContextCache[fileKey].slice(0, 3000)}\n\n`;
+        }
+      });
+
+      const systemPrompt = `You are "Design Debater", an elite Principal Product & UX Architect acting as a Socratic sparring partner for mobile design capture.
+Your user is Joey, an expert engineer vibe-coding on the go.
+Your role:
+1. Socratic & Subtractive (Via Negativa): DO NOT just praise ideas. Interrogate assumptions! Ask: Does this add cognitive load? Is there a simpler pattern? What happens when network/API fails? How does it look on mobile?
+2. Pragmatic & Concise: Keep answers under 3-4 short punchy paragraphs with bullet points. Joey is on iPhone during a lull.
+3. Reference project conventions from the context files provided below.
+
+Context:
+${activeContext}`;
+
+      try {
+        const reply = await callGemini(chatHistory, systemPrompt);
+        appendMessage('agent', reply);
+        chatHistory.push({ role: 'agent', text: reply });
+        if (navigator.vibrate) navigator.vibrate(15);
+      } catch (err) {
+        appendMessage('system', `Error: ${err.message}`);
+      } finally {
+        sendBtn.disabled = false;
+      }
+    }
+
+    document.getElementById('btnSendChat').addEventListener('click', sendChatMessage);
+    document.getElementById('chatInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendChatMessage();
+      }
+    });
+
+    document.getElementById('btnClearChat').addEventListener('click', () => {
+      chatHistory = [];
+      document.getElementById('chatMessages').innerHTML = `
+        <div class="chat-msg agent">
+          <div class="agent-tag">🤖 Design Debater</div>
+          Chat cleared. What design challenge in <b>${CONFIG.repo}</b> shall we debate next?
+        </div>
+      `;
+    });
+
+    // 3. Compile Spec Action
+    document.getElementById('btnCompileSpec').addEventListener('click', async () => {
+      if (chatHistory.length === 0) {
+        alert('Debate a design topic first before compiling a spec.');
+        return;
+      }
+
+      const btn = document.getElementById('btnCompileSpec');
+      btn.disabled = true;
+      btn.textContent = '⏳ Compiling...';
+
+      const compilePrompt = `Review the entire design debate above. Synthesize the final decisions into a complete, high-craft Markdown Design Spec.
+Include:
+# Design Spec: [Feature / Iteration Title]
+- **Target Repo:** ${CONFIG.owner}/${CONFIG.repo}
+- **Problem Statement:** Concise summary of user pain or deficiency.
+- **Decided UI/UX Solution:** Exact layout, hierarchy, and interaction design agreed upon.
+- **Edge Cases & Error States:** What was considered during the debate.
+- **Acceptance Criteria:** Concrete bullet points for the desktop AGY coding agent to implement.`;
+
+      try {
+        const specMessages = [...chatHistory, { role: 'user', text: compilePrompt }];
+        const result = await callGemini(specMessages, 'You are an expert technical writer and software architect.');
+        compiledSpecMarkdown = result;
+        
+        document.getElementById('specContent').innerHTML = `<pre style="white-space: pre-wrap; font-family: inherit;">${escapeHtml(result)}</pre>`;
+        document.getElementById('specDrawer').classList.add('active');
+      } catch (err) {
+        alert('Failed to compile spec: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '📝 Compile Spec';
+      }
+    });
+
+    function closeSpecDrawer() {
+      document.getElementById('specDrawer').classList.remove('active');
+    }
+
+    // 4. Commit Spec to GitHub
+    document.getElementById('btnCommitSpec').addEventListener('click', async () => {
+      if (!compiledSpecMarkdown) return;
+      const btn = document.getElementById('btnCommitSpec');
+      btn.disabled = true;
+      btn.textContent = '⏳ Committing Spec...';
+
+      try {
+        const now = new Date();
+        const dateStr = now.toISOString().slice(0, 10);
+        const timeStr = now.toTimeString().slice(0, 5).replace(':', '');
+        const filename = `${dateStr}-${timeStr}-design-debater-spec.md`;
+        const path = `ideation/${filename}`;
+        const commitMsg = `spec(design-debater): compiled design iteration [${dateStr}]`;
+
+        const result = await commitToGitHub(path, compiledSpecMarkdown, commitMsg);
+        closeSpecDrawer();
+        showAlert(`Spec committed to ${CONFIG.repo}/${path}!`, true, result.content?.html_url);
+        if (navigator.vibrate) navigator.vibrate([20, 50, 20]);
+      } catch (err) {
+        alert('Commit failed: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '🚀 Commit Spec to Repo';
+      }
+    });
+
+    // Settings Modal
+    function openSettingsModal() {
+      document.getElementById('inputGithubPat').value = CONFIG.githubPat;
+      document.getElementById('inputGeminiKey').value = CONFIG.geminiKey;
+      document.getElementById('settingsModal').classList.add('active');
+    }
+
+    function closeSettingsModal() {
+      document.getElementById('settingsModal').classList.remove('active');
+    }
+
+    document.getElementById('btnSettings').addEventListener('click', openSettingsModal);
+    document.getElementById('btnSaveSettings').addEventListener('click', () => {
+      CONFIG.githubPat = document.getElementById('inputGithubPat').value.trim();
+      CONFIG.geminiKey = document.getElementById('inputGeminiKey').value.trim();
+
+      localStorage.setItem('mma_github_pat', CONFIG.githubPat);
+      localStorage.setItem('mma_gemini_key', CONFIG.geminiKey);
+
+      closeSettingsModal();
+      showAlert('Settings saved successfully!');
+      loadRepoContextPills();
+    });
+
+    // Initial Context Load
+    if (CONFIG.githubPat) {
+      loadRepoContextPills();
+    }
+
+    // Register Service Worker for PWA
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(console.warn);
+    }
+  </script>
+</body>
+</html>

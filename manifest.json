@@ -1,0 +1,16 @@
+{
+  "name": "Mobile Markdown Agent",
+  "short_name": "MMA",
+  "description": "Distraction-free mobile capture and design debater for GitHub",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2318181b'/><path d='M30 70 L30 30 L50 52 L70 30 L70 70' fill='none' stroke='%2338bdf8' stroke-width='8' stroke-linecap='round' stroke-linejoin='round'/></svg>",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

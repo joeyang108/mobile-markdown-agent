@@ -3,12 +3,12 @@
 ## 1. Problem Statement & Motivation
 * **Context:** Away from the desk, sudden creative insights, sprint improvements, and app iterations occur. 
 * **Current State:** Quick thoughts are jotted down into Google Keep. While functional, Keep notes are disconnected from the GitHub repository workflow, lacking structure, markdown hierarchy, and seamless integration into future desktop coding sprints.
-* **Dopamine Defense Vector:** Idle phone time is the highest-risk trigger for "bad dopamine" (scrolling feeds, passive media). Replacing that reflex with an instant-access, high-craft capture vessel channels focus directly into creative, earned dopamine.
+* **Dopamine Defense Vector:** Idle phone time is the highest-risk trigger for "unhealthy dopamine" (scrolling feeds, passive media). Replacing that reflex with an instant-access, high-craft capture vessel channels focus directly into creative, earned dopamine.
 
 ---
 
 ## 2. Core Functional Requirements
-1. **Repository Selector:** Choose target repository (e.g. `vibe-coding-partner`, `Deep-Song-Explorer`, `NFL-Deep-Reader`, `Health-App-42`).
+1. **Repository Selector:** Choose target repository (e.g. `vibe-coding-partner`, `Deep-Song-Explorer`, `NFL-Deep-Reader`, `Health-App-42`), or pull a list of all github repos.
 2. **Directory Routing:** Automatically route entries into:
    - `ideation/` (App concepts, architectural ideas)
    - `notes/` (Daily reflections, dopamine defense check-ins)
