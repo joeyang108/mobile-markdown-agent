@@ -601,7 +601,7 @@
       <div class="chat-container">
         <div class="chat-actions-bar">
           <select id="modelSelect" class="input-select" style="flex: 1.2; padding: 8px 8px; font-size: 0.78rem; background: var(--card-bg); border-radius: 8px;">
-            <option value="gemini-1.5-flash" selected>⚡ Gemini 1.5 Flash</option>
+            <option value="">Discovering GA models...</option>
           </select>
           <button id="btnCompileSpec" class="btn-secondary" style="flex: 1;">
             📝 Compile Spec
@@ -614,18 +614,19 @@
         <div class="chat-messages" id="chatMessages">
           <div class="chat-msg agent">
             <div class="agent-tag">🤖 Design Debater</div>
-            Ready to debate designs for <b id="debateRepoDisplay">mobile-markdown-agent</b>. 
-            Tell me what UI issue, feature idea, or error state you want to critique. I will poke holes, challenge complexity, and protect your user experience.
+            Ready to debate designs for <b id="debateRepoDisplay">...</b>. 
+            Tell me what UI issue, feature idea, or edge case you want to critique. I will poke holes, challenge complexity, and protect your user experience.
           </div>
         </div>
 
         <div class="chat-input-bar">
-          <textarea id="chatInput" class="chat-textarea" rows="3"
-            placeholder="Debate UI, flow, error handling..."
-            autocomplete="on"
+          <textarea id="chatInput" name="debater-prompt" class="chat-textarea" rows="3"
+            placeholder="Spar with Debater on UI, logic, architecture..."
+            autocomplete="off"
             autocorrect="on"
             autocapitalize="sentences"
-            spellcheck="true"></textarea>
+            spellcheck="true"
+            enterkeyhint="send"></textarea>
           <button id="btnSendChat" class="btn-send">➔</button>
         </div>
       </div>
@@ -675,7 +676,7 @@
           <button type="button" id="btnRefreshModels" class="btn-secondary" style="padding: 2px 8px; font-size: 0.72rem; flex: 0 0 auto;">↻ Refresh Models</button>
         </div>
         <select id="settingsModelSelect" class="input-select">
-          <option value="gemini-1.5-flash" selected>Gemini 1.5 Flash</option>
+          <option value="">Discovering GA models...</option>
         </select>
       </div>
 
@@ -693,7 +694,7 @@
       repo: localStorage.getItem('mma_repo') || 'mobile-markdown-agent',
       githubPat: localStorage.getItem('mma_github_pat') || '',
       geminiKey: localStorage.getItem('mma_gemini_key') || '',
-      geminiModel: localStorage.getItem('mma_gemini_model') || 'gemini-1.5-flash'
+      geminiModel: localStorage.getItem('mma_gemini_model') || ''
     };
 
     let chatHistory = [];
@@ -722,8 +723,12 @@
     const modelSelect = document.getElementById('modelSelect');
     const settingsModelSelect = document.getElementById('settingsModelSelect');
 
+    // Immediately reflect active repo in Debater opening remark
+    if (debateRepoDisplay) debateRepoDisplay.textContent = CONFIG.repo;
+
     // Init Model Selector
     function setModel(m) {
+      if (!m) return;
       CONFIG.geminiModel = m;
       localStorage.setItem('mma_gemini_model', m);
       if (modelSelect) modelSelect.value = m;
@@ -737,12 +742,11 @@
       settingsModelSelect.addEventListener('change', (e) => setModel(e.target.value));
     }
 
-    // Dynamic Gemini Model Discovery
+    // Dynamic Gemini Model Discovery (Strict GA, zero hardcoding)
     async function fetchAvailableGeminiModels(forceRefresh = false) {
       if (!CONFIG.geminiKey) {
         populateModelDropdowns([
-          { id: 'gemini-1.5-flash', displayName: 'Gemini 1.5 Flash' },
-          { id: 'gemini-1.5-pro', displayName: 'Gemini 1.5 Pro' }
+          { id: '', displayName: 'Configure Gemini API Key in Settings' }
         ]);
         return;
       }
@@ -767,34 +771,49 @@
         const data = await res.json();
         if (!data.models || !Array.isArray(data.models)) return;
 
-        // Filter models that support generateContent and exclude embeddings, legacy, or audio-only
-        const validModels = data.models
+        // Strict GA filter:
+        // 1. Must support generateContent method.
+        // 2. Reject all non-GA markers (exp, preview, thinking, omni, embed, etc.)
+        // 3. Must be a general conversational/reasoning model (contains flash or pro).
+        const nonGaPatterns = ['exp', 'preview', 'thinking', 'omni', 'embed', 'aqa', 'imagen', 'learnlm', 'tuning', 'realtime', 'custom'];
+
+        const gaModels = data.models
           .filter(m => {
             const methods = m.supportedGenerationMethods || [];
-            const id = m.name.replace(/^models\//, '');
-            return methods.includes('generateContent') &&
-                   !id.includes('embedding') &&
-                   !id.includes('aqa') &&
-                   !id.includes('imagen');
+            if (!methods.includes('generateContent')) return false;
+
+            const id = m.name.replace(/^models\//, '').toLowerCase();
+            const disp = (m.displayName || '').toLowerCase();
+
+            if (nonGaPatterns.some(pat => id.includes(pat) || disp.includes(pat))) {
+              return false;
+            }
+
+            return id.includes('flash') || id.includes('pro');
           })
           .map(m => {
             const id = m.name.replace(/^models\//, '');
-            const displayName = m.displayName ? `${m.displayName} (${id})` : id;
-            return { id, displayName };
+            // Dynamically extract version number (e.g. gemini-3.8-flash -> 3.8)
+            const match = id.match(/gemini-(\d+(?:\.\d+)?)/i);
+            const version = match ? parseFloat(match[1]) : 0.0;
+            const isFlash = id.toLowerCase().includes('flash');
+            const cleanDisplay = m.displayName ? `${m.displayName} (GA)` : `${id} (GA)`;
+            return { id, displayName: cleanDisplay, version, isFlash };
           });
 
-        if (validModels.length > 0) {
-          // Sort models: Flash models first, then Pro, then descending by id
-          validModels.sort((a, b) => {
-            const aFlash = a.id.includes('flash');
-            const bFlash = b.id.includes('flash');
-            if (aFlash && !bFlash) return -1;
-            if (!aFlash && bFlash) return 1;
-            return b.id.localeCompare(a.id);
+        if (gaModels.length > 0) {
+          // Sort dynamically: Highest version number first; prefer Flash over Pro for speed
+          gaModels.sort((a, b) => {
+            if (b.version !== a.version) {
+              return b.version - a.version;
+            }
+            if (a.isFlash && !b.isFlash) return -1;
+            if (!a.isFlash && b.isFlash) return 1;
+            return a.id.localeCompare(b.id);
           });
 
-          localStorage.setItem('mma_cached_models', JSON.stringify(validModels));
-          populateModelDropdowns(validModels);
+          localStorage.setItem('mma_cached_models', JSON.stringify(gaModels));
+          populateModelDropdowns(gaModels);
         }
       } catch (err) {
         console.warn('Error fetching Gemini models:', err);
@@ -813,10 +832,11 @@
           opt.textContent = m.displayName;
           select.appendChild(opt);
         });
-        const exists = models.some(m => m.id === curVal);
+        const exists = models.some(m => m.id === curVal && m.id !== '');
         if (exists) {
           select.value = curVal;
-        } else {
+        } else if (models[0].id) {
+          // Automatically select the latest GA Flash model dynamically
           select.value = models[0].id;
           setModel(models[0].id);
         }
@@ -1119,7 +1139,14 @@
         throw new Error('Please configure your Gemini API Key in Settings.');
       }
 
-      const activeModel = CONFIG.geminiModel || 'gemini-1.5-flash';
+      let activeModel = CONFIG.geminiModel || (modelSelect && modelSelect.value);
+      if (!activeModel) {
+        await fetchAvailableGeminiModels(true);
+        activeModel = CONFIG.geminiModel || (modelSelect && modelSelect.value);
+      }
+      if (!activeModel) {
+        throw new Error('No GA Gemini model available. Please verify your Gemini API key in Settings.');
+      }
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${CONFIG.geminiKey}`;
 
       const contents = messages.map(m => ({
