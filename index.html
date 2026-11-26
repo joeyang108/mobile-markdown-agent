@@ -372,9 +372,10 @@
       font-size: 0.95rem;
       outline: none;
       resize: none;
-      max-height: 120px;
+      min-height: 72px;
+      max-height: 140px;
       font-family: inherit;
-      line-height: 1.4;
+      line-height: 1.45;
     }
 
     .btn-send {
@@ -501,9 +502,10 @@
   <!-- Context Pills Bar (Strategy A + B) -->
   <div class="context-bar" id="contextBar">
     <span class="context-label">Context:</span>
-    <span class="pill active" data-file="README.md" title="Repo overview">✓ README.md</span>
-    <span class="pill active" data-file="GEMINI.md" title="Workspace rules & guardrails">✓ GEMINI.md</span>
-    <span class="pill active" data-file="backlog" title="Active backlog or designs">✓ backlog/designs</span>
+    <div id="contextPillsContainer" style="display: inline-flex; align-items: center; gap: 8px;">
+      <span class="pill active" data-file="README.md" title="Repo overview">✓ README.md</span>
+      <span class="pill active" data-file="GEMINI.md" title="Workspace rules & guardrails">✓ GEMINI.md</span>
+    </div>
   </div>
 
   <!-- Mode Navigation -->
@@ -553,10 +555,7 @@
 
         <div class="chat-actions-bar">
           <select id="modelSelect" class="input-select" style="flex: 1.2; padding: 8px 8px; font-size: 0.78rem; background: var(--card-bg); border-radius: 8px;">
-            <option value="gemini-1.5-flash" selected>⚡ Gemini 1.5 Flash (GA)</option>
-            <option value="gemini-1.5-pro">🧠 Gemini 1.5 Pro (GA)</option>
-            <option value="gemini-2.5-flash">🚀 Gemini 2.5 Flash</option>
-            <option value="gemini-2.0-flash">✨ Gemini 2.0 Flash</option>
+            <option value="gemini-1.5-flash" selected>⚡ Gemini 1.5 Flash</option>
           </select>
           <button id="btnCompileSpec" class="btn-secondary" style="flex: 1;">
             📝 Compile Spec
@@ -567,7 +566,12 @@
         </div>
 
         <div class="chat-input-bar">
-          <textarea id="chatInput" class="chat-textarea" rows="1" placeholder="Debate UI, flow, error handling..."></textarea>
+          <textarea id="chatInput" class="chat-textarea" rows="3"
+            placeholder="Debate UI, flow, error handling..."
+            autocomplete="on"
+            autocorrect="on"
+            autocapitalize="sentences"
+            spellcheck="true"></textarea>
           <button id="btnSendChat" class="btn-send">➔</button>
         </div>
       </div>
@@ -612,12 +616,12 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label">Default Gemini Model</label>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <label class="form-label" style="margin-bottom: 0;">Default Gemini Model</label>
+          <button type="button" id="btnRefreshModels" class="btn-secondary" style="padding: 2px 8px; font-size: 0.72rem; flex: 0 0 auto;">↻ Refresh Models</button>
+        </div>
         <select id="settingsModelSelect" class="input-select">
-          <option value="gemini-1.5-flash" selected>Gemini 1.5 Flash (GA - Recommended)</option>
-          <option value="gemini-1.5-pro">Gemini 1.5 Pro (GA - Deep Reasoning)</option>
-          <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-          <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+          <option value="gemini-1.5-flash" selected>Gemini 1.5 Flash</option>
         </select>
       </div>
 
@@ -673,12 +677,106 @@
     }
 
     if (modelSelect) {
-      modelSelect.value = CONFIG.geminiModel;
       modelSelect.addEventListener('change', (e) => setModel(e.target.value));
     }
     if (settingsModelSelect) {
-      settingsModelSelect.value = CONFIG.geminiModel;
       settingsModelSelect.addEventListener('change', (e) => setModel(e.target.value));
+    }
+
+    // Dynamic Gemini Model Discovery
+    async function fetchAvailableGeminiModels(forceRefresh = false) {
+      if (!CONFIG.geminiKey) {
+        populateModelDropdowns([
+          { id: 'gemini-1.5-flash', displayName: 'Gemini 1.5 Flash' },
+          { id: 'gemini-1.5-pro', displayName: 'Gemini 1.5 Pro' }
+        ]);
+        return;
+      }
+
+      const cached = localStorage.getItem('mma_cached_models');
+      if (cached && !forceRefresh) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            populateModelDropdowns(parsed);
+            return;
+          }
+        } catch (_) {}
+      }
+
+      try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${CONFIG.geminiKey}`);
+        if (!res.ok) {
+          console.warn('Failed to fetch Gemini models:', res.status);
+          return;
+        }
+        const data = await res.json();
+        if (!data.models || !Array.isArray(data.models)) return;
+
+        // Filter models that support generateContent and exclude embeddings, legacy, or audio-only
+        const validModels = data.models
+          .filter(m => {
+            const methods = m.supportedGenerationMethods || [];
+            const id = m.name.replace(/^models\//, '');
+            return methods.includes('generateContent') &&
+                   !id.includes('embedding') &&
+                   !id.includes('aqa') &&
+                   !id.includes('imagen');
+          })
+          .map(m => {
+            const id = m.name.replace(/^models\//, '');
+            const displayName = m.displayName ? `${m.displayName} (${id})` : id;
+            return { id, displayName };
+          });
+
+        if (validModels.length > 0) {
+          // Sort models: Flash models first, then Pro, then descending by id
+          validModels.sort((a, b) => {
+            const aFlash = a.id.includes('flash');
+            const bFlash = b.id.includes('flash');
+            if (aFlash && !bFlash) return -1;
+            if (!aFlash && bFlash) return 1;
+            return b.id.localeCompare(a.id);
+          });
+
+          localStorage.setItem('mma_cached_models', JSON.stringify(validModels));
+          populateModelDropdowns(validModels);
+        }
+      } catch (err) {
+        console.warn('Error fetching Gemini models:', err);
+      }
+    }
+
+    function populateModelDropdowns(models) {
+      if (!models || models.length === 0) return;
+      const targets = [modelSelect, settingsModelSelect].filter(Boolean);
+      targets.forEach(select => {
+        const curVal = select.value || CONFIG.geminiModel;
+        select.innerHTML = '';
+        models.forEach(m => {
+          const opt = document.createElement('option');
+          opt.value = m.id;
+          opt.textContent = m.displayName;
+          select.appendChild(opt);
+        });
+        const exists = models.some(m => m.id === curVal);
+        if (exists) {
+          select.value = curVal;
+        } else {
+          select.value = models[0].id;
+          setModel(models[0].id);
+        }
+      });
+    }
+
+    const btnRefreshModels = document.getElementById('btnRefreshModels');
+    if (btnRefreshModels) {
+      btnRefreshModels.addEventListener('click', async () => {
+        btnRefreshModels.textContent = '⏳ Fetching...';
+        await fetchAvailableGeminiModels(true);
+        btnRefreshModels.textContent = '✓ Updated';
+        setTimeout(() => { btnRefreshModels.textContent = '↻ Refresh Models'; }, 2000);
+      });
     }
 
     // Init Repo Selector
@@ -709,28 +807,32 @@
       });
     }
 
-    // Context Pills (Strategy A + B)
-    function setupContextPills() {
-      contextBar.querySelectorAll('.pill').forEach(pill => {
-        pill.addEventListener('click', () => {
-          pill.classList.toggle('active');
-          if (pill.classList.contains('active')) {
-            pill.textContent = '✓ ' + pill.dataset.file;
-          } else {
-            pill.textContent = '○ ' + pill.dataset.file;
-          }
-        });
-      });
-    }
-    setupContextPills();
-
     function getAuthHeader() {
       if (!CONFIG.githubPat) return '';
       const pat = CONFIG.githubPat.trim();
       return pat.startsWith('ghp_') ? `token ${pat}` : `Bearer ${pat}`;
     }
 
-    // Fetch repository context files (README, GEMINI, etc.) via GitHub REST API
+    // Fetch repository contents/directory listing via GitHub REST API
+    async function fetchRepoContents(dirPath = '') {
+      if (!CONFIG.githubPat) return null;
+      try {
+        const pathSuffix = dirPath ? `/${dirPath}` : '';
+        const res = await fetch(`https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents${pathSuffix}`, {
+          headers: {
+            'Authorization': getAuthHeader(),
+            'Accept': 'application/vnd.github.v3+json'
+          }
+        });
+        if (!res.ok) return null;
+        return await res.json();
+      } catch (err) {
+        console.warn(`Failed to fetch contents at ${dirPath}:`, err);
+        return null;
+      }
+    }
+
+    // Fetch repository file content via GitHub REST API
     async function fetchFileContent(filePath) {
       if (!CONFIG.githubPat) return null;
       try {
@@ -749,26 +851,107 @@
       }
     }
 
+    // Dynamic Context Pills (Discovers *.md in root and key ideation docs)
     async function loadRepoContextPills() {
       repoContextCache = {};
-      const pills = contextBar.querySelectorAll('.pill');
-      for (const pill of pills) {
-        const file = pill.dataset.file;
-        let content = null;
-        if (file === 'backlog') {
-          // Probe backlog or designs
-          content = await fetchFileContent('backlog/backlog.md') || await fetchFileContent('designs/001-architecture-triad.md');
-        } else {
-          content = await fetchFileContent(file);
-        }
-        if (content) {
-          repoContextCache[file] = content;
-          pill.style.display = 'inline-flex';
-        } else {
-          // Keep pill visible but dimmer if not found
-          pill.style.opacity = '0.5';
-        }
+      const container = document.getElementById('contextPillsContainer');
+      if (!container) return;
+
+      if (!CONFIG.githubPat) {
+        container.innerHTML = `
+          <span class="pill active" data-file="README.md" title="Repo overview">✓ README.md</span>
+          <span class="pill active" data-file="GEMINI.md" title="Workspace rules & guardrails">✓ GEMINI.md</span>
+        `;
+        bindPillClickHandlers();
+        return;
       }
+
+      container.innerHTML = `<span style="font-size: 0.72rem; color: var(--text-muted); padding: 4px 6px;">Scanning repo markdown...</span>`;
+
+      try {
+        const rootItems = await fetchRepoContents('');
+        if (!Array.isArray(rootItems)) {
+          container.innerHTML = `<span style="font-size: 0.72rem; color: var(--text-muted);">No repo context available</span>`;
+          return;
+        }
+
+        // 1. Root-level markdown files
+        const mdFiles = rootItems
+          .filter(item => item.type === 'file' && item.name.toLowerCase().endsWith('.md'))
+          .map(item => ({ path: item.path, name: item.name }));
+
+        // 2. Discover key docs in ideation/ if directory exists
+        const hasIdeation = rootItems.some(item => item.type === 'dir' && item.name === 'ideation');
+        if (hasIdeation) {
+          const ideationItems = await fetchRepoContents('ideation');
+          if (Array.isArray(ideationItems)) {
+            const ideationMds = ideationItems
+              .filter(item => item.type === 'file' && item.name.toLowerCase().endsWith('.md'))
+              .sort((a, b) => b.name.localeCompare(a.name))
+              .slice(0, 2);
+            ideationMds.forEach(item => {
+              mdFiles.push({ path: item.path, name: `ideation/${item.name}` });
+            });
+          }
+        }
+
+        container.innerHTML = '';
+        if (mdFiles.length === 0) {
+          container.innerHTML = `<span style="font-size: 0.72rem; color: var(--text-muted);">No markdown files found</span>`;
+          return;
+        }
+
+        mdFiles.forEach(fileObj => {
+          const pill = document.createElement('span');
+          const isDefaultActive = fileObj.name === 'README.md' || fileObj.name === 'GEMINI.md' || fileObj.name.includes('vision');
+          pill.className = `pill ${isDefaultActive ? 'active' : ''}`;
+          pill.dataset.file = fileObj.path;
+          pill.dataset.displayName = fileObj.name;
+          pill.title = fileObj.path;
+          pill.textContent = (isDefaultActive ? '✓ ' : '○ ') + fileObj.name;
+          container.appendChild(pill);
+
+          // Lazy prefetch default active context
+          if (isDefaultActive) {
+            fetchFileContent(fileObj.path).then(content => {
+              if (content) repoContextCache[fileObj.path] = content;
+            });
+          }
+        });
+
+        bindPillClickHandlers();
+      } catch (err) {
+        console.warn('Error discovering repo markdown files:', err);
+        container.innerHTML = `
+          <span class="pill active" data-file="README.md">✓ README.md</span>
+          <span class="pill active" data-file="GEMINI.md">✓ GEMINI.md</span>
+        `;
+        bindPillClickHandlers();
+      }
+    }
+
+    function bindPillClickHandlers() {
+      const container = document.getElementById('contextPillsContainer');
+      if (!container) return;
+      container.querySelectorAll('.pill').forEach(pill => {
+        pill.onclick = async () => {
+          pill.classList.toggle('active');
+          const file = pill.dataset.file;
+          const name = pill.dataset.displayName || file;
+          const isActive = pill.classList.contains('active');
+          pill.textContent = (isActive ? '✓ ' : '○ ') + name;
+
+          // Lazy-load file content upon activation if not cached
+          if (isActive && !repoContextCache[file]) {
+            pill.style.opacity = '0.5';
+            const content = await fetchFileContent(file);
+            if (content) {
+              repoContextCache[file] = content;
+            }
+            pill.style.opacity = '1';
+          }
+        };
+      });
     }
 
     // Switch Tabs
@@ -908,8 +1091,14 @@
       });
 
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error?.message || 'Gemini API call failed');
+        const err = await res.json().catch(() => ({}));
+        const errMsg = err.error?.message || `HTTP ${res.status}`;
+        // If model not found or unavailable, refresh model cache & trigger dynamic re-fetch
+        if (res.status === 404 || errMsg.toLowerCase().includes('not found') || errMsg.toLowerCase().includes('unsupported')) {
+          localStorage.removeItem('mma_cached_models');
+          fetchAvailableGeminiModels(true);
+        }
+        throw new Error(errMsg);
       }
 
       const data = await res.json();
@@ -949,12 +1138,16 @@
 
       // Build system prompt with selected context pills
       let activeContext = `Current Target Project: ${CONFIG.owner}/${CONFIG.repo}\n\n`;
-      contextBar.querySelectorAll('.pill.active').forEach(p => {
+      const activePills = contextBar.querySelectorAll('.pill.active');
+      for (const p of activePills) {
         const fileKey = p.dataset.file;
+        if (!repoContextCache[fileKey]) {
+          repoContextCache[fileKey] = await fetchFileContent(fileKey);
+        }
         if (repoContextCache[fileKey]) {
           activeContext += `--- Context File: ${fileKey} ---\n${repoContextCache[fileKey].slice(0, 3000)}\n\n`;
         }
-      });
+      }
 
       const systemPrompt = `You are "Design Debater", an elite Principal Product & UX Architect acting as a Socratic sparring partner for mobile design capture.
 Your user is Joey, an expert engineer vibe-coding on the go.
@@ -980,7 +1173,8 @@ ${activeContext}`;
 
     document.getElementById('btnSendChat').addEventListener('click', sendChatMessage);
     document.getElementById('chatInput').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
+      const isMobile = window.innerWidth <= 768 || ('ontouchstart' in window);
+      if (e.key === 'Enter' && !e.shiftKey && !isMobile) {
         e.preventDefault();
         sendChatMessage();
       }
@@ -1089,10 +1283,12 @@ Include:
 
       closeSettingsModal();
       showAlert('Settings saved successfully!');
+      fetchAvailableGeminiModels(true);
       loadRepoContextPills();
     });
 
-    // Initial Context Load
+    // Initial Discovery & Context Load
+    fetchAvailableGeminiModels();
     if (CONFIG.githubPat) {
       loadRepoContextPills();
     }
