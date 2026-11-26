@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mma-v2';
+const CACHE_NAME = 'mma-v3';
 const ASSETS = [
   './',
   './index.html',

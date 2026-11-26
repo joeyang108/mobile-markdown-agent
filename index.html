@@ -524,23 +524,15 @@
     <section id="viewQuick" class="view active">
       <div class="form-group">
         <label class="form-label">Title / Feature Slug</label>
-        <input type="text" id="quickTitle" class="input-text" placeholder="e.g. Scrubber Haptic Feedback" />
-      </div>
-
-      <div class="form-group" style="display: flex; gap: 8px;">
-        <div style="flex: 1;">
-          <label class="form-label">Directory</label>
-          <select id="quickDir" class="input-select">
-            <option value="ideation" selected>ideation/</option>
-            <option value="designs">designs/</option>
-            <option value="notes">notes/</option>
-          </select>
-        </div>
+        <input type="text" id="quickTitle" class="input-text" placeholder="e.g. fix: Scrubber Haptic Feedback" />
       </div>
 
       <div class="form-group" style="flex: 1; display: flex; flex-direction: column;">
-        <label class="form-label">Markdown Body (Dictation friendly)</label>
-        <textarea id="quickBody" class="input-area" placeholder="Jot down the design thought, UI friction point, or sprint idea..."></textarea>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <label class="form-label" style="margin-bottom: 0;">Markdown Note / Brain-Dump</label>
+          <span style="font-size: 0.72rem; color: var(--accent); font-family: monospace;">📁 ideation/</span>
+        </div>
+        <textarea id="quickBody" class="input-area" placeholder="Jot down the design thought, UI friction point, bug, or sprint idea..."></textarea>
       </div>
 
       <button id="btnCommitQuick" class="btn-action">
@@ -843,11 +835,10 @@
     document.getElementById('btnCommitQuick').addEventListener('click', async () => {
       const titleInput = document.getElementById('quickTitle');
       const bodyInput = document.getElementById('quickBody');
-      const dirSelect = document.getElementById('quickDir');
 
       const title = titleInput.value.trim();
       const body = bodyInput.value.trim();
-      const dir = dirSelect.value;
+      const dir = 'ideation';
 
       if (!title || !body) {
         alert('Please enter a title and some notes before committing.');
