@@ -120,5 +120,5 @@ Captures are classified using standard engineering prefixes in the Title:
 
 * **Initial Live Commit:** Tested and verified on iPhone 15 running iOS Safari Standalone PWA.
 * **Commit Hash:** `7d099597605447c832df245905e3930fb0e95c49`
-* **Artifact Generated:** [ideation/2026-11-26-0945-hello-world.md](file:///Users/googlejoe/macagyvibes/mobile-markdown-agent/ideation/2026-11-26-0945-hello-world.md)
+* **Artifact Generated:** [ideation/archive/2026-11-26-0945-hello-world.md](file:///Users/googlejoe/macagyvibes/mobile-markdown-agent/ideation/archive/2026-11-26-0945-hello-world.md)
 * **HTTP Latency:** ~380ms roundtrip for direct REST PUT on LTE/5G.

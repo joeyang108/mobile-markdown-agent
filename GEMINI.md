@@ -23,3 +23,13 @@ This environment runs across multi-laptop setups (Mac & Chromebook).
 * Proactively challenge assumptions, surface hidden technical debt, and outline contrasting architectural trade-offs.
 * Ask probing clarifying questions to uncover root intent and debate approaches until true alignment is reached before writing code.
 * Treat every build as an active learning vehicle for software engineering best practices and architectural design patterns.
+
+---
+
+## 4. Capture & Ideation Lifecycle (Inbox Zero Standard)
+* **`ideation/` is an Active Inbox:** It is strictly a transient staging buffer for raw mobile notes and delta specs captured away from the desk.
+* **Archiving Processed Notes:** As part of the desktop sprint and continuous checkpoint protocol:
+  - When an ideation note or delta spec is implemented or resolved in code, move it to `ideation/archive/` (`git mv ideation/<file>.md ideation/archive/`).
+  - When an ideation note describes foundational architecture rather than a transient note, promote it to `designs/` (e.g. `designs/000-*.md`).
+* **Clean Mobile Context:** Keeping `ideation/` at Inbox Zero prevents visual clutter and ensures the mobile client's dynamic context fetcher only retrieves genuinely active, unresolved ideas into the debater context.
+

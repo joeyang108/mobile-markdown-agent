@@ -65,11 +65,12 @@ MMA stores all credentials strictly in your device's private browser `localStora
 ```text
 mobile-markdown-agent/
 ├── designs/
+│   ├── 000-mobile-markdown-agent-vision.md     # Foundational Vision Doc
 │   ├── 001-sprint-1-design-debater.md          # Sprint 1 Brief
 │   └── 002-v1-architecture-and-system-design.md # Full System Architecture & Spec
 ├── ideation/
-│   ├── 01-mobile-markdown-agent-vision.md      # Foundational Vision Doc
-│   └── *.md                                    # Inbound captures from mobile
+│   ├── archive/                                # Resolved/implemented captures
+│   └── *.md                                    # Active inbound captures from mobile (Inbox Zero)
 ├── notes/
 │   └── 2026-11-25-sprint-1-checkpoint.md       # Session handovers & logs
 ├── index.html                                  # Standalone PWA frontend
