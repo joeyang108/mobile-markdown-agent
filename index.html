@@ -35,12 +35,13 @@
       font-family: var(--font-system);
       background-color: var(--bg);
       color: var(--text);
-      min-height: 100vh;
+      height: 100dvh;
+      height: 100vh;
       display: flex;
       flex-direction: column;
       padding-top: env(safe-area-inset-top, 20px);
       padding-bottom: env(safe-area-inset-bottom, 20px);
-      overflow-x: hidden;
+      overflow: hidden;
     }
 
     /* Header */
@@ -50,10 +51,9 @@
       align-items: center;
       justify-content: space-between;
       border-bottom: 1px solid var(--border);
-      background: rgba(9, 9, 11, 0.85);
+      background: rgba(9, 9, 11, 0.95);
       backdrop-filter: blur(12px);
-      position: sticky;
-      top: 0;
+      flex-shrink: 0;
       z-index: 50;
     }
 
@@ -123,6 +123,7 @@
       overflow-x: auto;
       white-space: nowrap;
       scrollbar-width: none;
+      flex-shrink: 0;
     }
     .context-bar::-webkit-scrollbar { display: none; }
 
@@ -166,6 +167,7 @@
       padding: 10px 16px;
       gap: 8px;
       background: var(--bg);
+      flex-shrink: 0;
     }
 
     .tab-btn {
@@ -197,14 +199,21 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      padding: 0 16px 16px 16px;
+      padding: 0 16px 14px 16px;
       max-width: 680px;
       width: 100%;
       margin: 0 auto;
+      min-height: 0;
+      overflow: hidden;
     }
 
-    .view { display: none; flex-direction: column; flex: 1; }
+    .view { display: none; flex-direction: column; flex: 1; min-height: 0; }
     .view.active { display: flex; }
+
+    #viewQuick {
+      overflow-y: auto;
+      padding-bottom: 20px;
+    }
 
     /* Quick Note View */
     .form-group {
@@ -274,16 +283,27 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      min-height: 380px;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .chat-actions-bar {
+      display: flex;
+      gap: 8px;
+      padding: 4px 0 8px 0;
+      flex-shrink: 0;
+      background: var(--bg);
     }
 
     .chat-messages {
       flex: 1;
       overflow-y: auto;
-      padding: 8px 0 16px 0;
+      padding: 6px 0 12px 0;
       display: flex;
       flex-direction: column;
       gap: 12px;
+      min-height: 0;
+      -webkit-overflow-scrolling: touch;
     }
 
     .chat-msg {
@@ -331,10 +351,36 @@
       gap: 4px;
     }
 
-    .chat-actions-bar {
-      display: flex;
-      gap: 8px;
-      padding: 8px 0;
+    @keyframes spin-42 {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .spinner-42 {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #a855f7, #38bdf8);
+      color: #09090b;
+      font-size: 0.75rem;
+      font-weight: 900;
+      font-family: monospace;
+      animation: spin-42 1s linear infinite;
+      box-shadow: 0 0 12px rgba(168, 85, 247, 0.45);
+      flex-shrink: 0;
+    }
+
+    .munging-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.92rem;
+      color: #c084fc;
+      font-weight: 600;
+      font-style: italic;
     }
 
     .btn-secondary {
@@ -362,6 +408,8 @@
       border: 1px solid var(--border);
       border-radius: 14px;
       padding: 8px 10px;
+      flex-shrink: 0;
+      margin-top: 4px;
     }
 
     .chat-textarea {
@@ -551,14 +599,6 @@
     <!-- 2. Design Debater View -->
     <section id="viewDebate" class="view">
       <div class="chat-container">
-        <div class="chat-messages" id="chatMessages">
-          <div class="chat-msg agent">
-            <div class="agent-tag">🤖 Design Debater</div>
-            Ready to debate designs for <b id="debateRepoDisplay">mobile-markdown-agent</b>. 
-            Tell me what UI issue, feature idea, or error state you want to critique. I will poke holes, challenge complexity, and protect your user experience.
-          </div>
-        </div>
-
         <div class="chat-actions-bar">
           <select id="modelSelect" class="input-select" style="flex: 1.2; padding: 8px 8px; font-size: 0.78rem; background: var(--card-bg); border-radius: 8px;">
             <option value="gemini-1.5-flash" selected>⚡ Gemini 1.5 Flash</option>
@@ -569,6 +609,14 @@
           <button id="btnClearChat" class="btn-secondary" style="flex: 0 0 auto;">
             🧹 Clear
           </button>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+          <div class="chat-msg agent">
+            <div class="agent-tag">🤖 Design Debater</div>
+            Ready to debate designs for <b id="debateRepoDisplay">mobile-markdown-agent</b>. 
+            Tell me what UI issue, feature idea, or error state you want to critique. I will poke holes, challenge complexity, and protect your user experience.
+          </div>
         </div>
 
         <div class="chat-input-bar">
@@ -1165,15 +1213,36 @@ Your role:
 Context:
 ${activeContext}`;
 
+      // Add fun "Munging..." indicator with spinning 42
+      const mungingId = 'mungingIndicator';
+      const mungingDiv = document.createElement('div');
+      mungingDiv.id = mungingId;
+      mungingDiv.className = 'chat-msg agent munging';
+      mungingDiv.innerHTML = `
+        <div class="agent-tag">🤖 Design Debater</div>
+        <div class="munging-indicator">
+          <span class="spinner-42">42</span>
+          <span>Munging...</span>
+        </div>
+      `;
+      const container = document.getElementById('chatMessages');
+      container.appendChild(mungingDiv);
+      container.scrollTop = container.scrollHeight;
+
       try {
         const reply = await callGemini(chatHistory, systemPrompt);
+        const mDiv = document.getElementById(mungingId);
+        if (mDiv) mDiv.remove();
         appendMessage('agent', reply);
         chatHistory.push({ role: 'agent', text: reply });
         if (navigator.vibrate) navigator.vibrate(15);
       } catch (err) {
+        const mDiv = document.getElementById(mungingId);
+        if (mDiv) mDiv.remove();
         appendMessage('system', `Error: ${err.message}`);
       } finally {
         sendBtn.disabled = false;
+        container.scrollTop = container.scrollHeight;
       }
     }
 
@@ -1205,7 +1274,7 @@ ${activeContext}`;
 
       const btn = document.getElementById('btnCompileSpec');
       btn.disabled = true;
-      btn.textContent = '⏳ Compiling...';
+      btn.textContent = '⏳ Munging Spec...';
 
       const compilePrompt = `Review the entire design debate above. Synthesize the final decisions into a complete, high-craft Markdown Design Spec.
 Include:
