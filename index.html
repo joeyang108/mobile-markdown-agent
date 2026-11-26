@@ -236,15 +236,15 @@
 
     textarea.input-area {
       width: 100%;
-      flex: 1;
-      min-height: 240px;
+      min-height: 90px;
+      max-height: 180px;
       background: var(--card-bg);
       border: 1px solid var(--border);
       color: var(--text);
-      padding: 14px;
+      padding: 12px 14px;
       border-radius: 10px;
       font-size: 0.95rem;
-      line-height: 1.5;
+      line-height: 1.45;
       font-family: inherit;
       outline: none;
       resize: vertical;
@@ -495,6 +495,7 @@
         <option value="_custom">+ Custom Repo...</option>
       </select>
 
+      <button id="btnAppRefresh" class="icon-btn" title="Refresh & load latest app version">🔄</button>
       <button id="btnSettings" class="icon-btn" title="Settings">⚙️</button>
     </div>
   </header>
@@ -529,12 +530,17 @@
         <input type="text" id="quickTitle" class="input-text" placeholder="e.g. fix: Scrubber Haptic Feedback" />
       </div>
 
-      <div class="form-group" style="flex: 1; display: flex; flex-direction: column;">
+      <div class="form-group" style="display: flex; flex-direction: column;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
           <label class="form-label" style="margin-bottom: 0;">Markdown Note / Brain-Dump</label>
           <span style="font-size: 0.72rem; color: var(--accent); font-family: monospace;">📁 ideation/</span>
         </div>
-        <textarea id="quickBody" class="input-area" placeholder="Jot down the design thought, UI friction point, bug, or sprint idea..."></textarea>
+        <textarea id="quickBody" class="input-area" rows="4"
+          placeholder="Jot down the design thought, UI friction point, bug, or sprint idea..."
+          autocomplete="on"
+          autocorrect="on"
+          autocapitalize="sentences"
+          spellcheck="true"></textarea>
       </div>
 
       <button id="btnCommitQuick" class="btn-action">
@@ -1040,7 +1046,7 @@
         const filename = `${dateStr}-${timeStr}-${slug}.md`;
         const path = `${dir}/${filename}`;
 
-        const markdown = `# ${title}\n\n- **Date:** ${now.toISOString()}\n- **Author:** Joey (Mobile Markdown Agent)\n- **Target Repo:** ${CONFIG.owner}/${CONFIG.repo}\n\n---\n\n${body}\n`;
+        const markdown = `# ${title}\n\n- **Date:** ${now.toISOString()}\n- **Author:** Joe (Mobile Markdown Agent)\n- **Target Repo:** ${CONFIG.owner}/${CONFIG.repo}\n\n---\n\n${body}\n`;
         const commitMsg = `docs(mobile): capture ${title} [${dateStr}]`;
 
         const result = await commitToGitHub(path, markdown, commitMsg);
@@ -1149,12 +1155,12 @@
         }
       }
 
-      const systemPrompt = `You are "Design Debater", an elite Principal Product & UX Architect acting as a Socratic sparring partner for mobile design capture.
-Your user is Joey, an expert engineer vibe-coding on the go.
+      const systemPrompt = `You are "Design Debater", an elite Principal Product & UX Architect acting as Joe's trusted peer and vibe-coding partner on the go.
 Your role:
-1. Socratic & Subtractive (Via Negativa): DO NOT just praise ideas. Interrogate assumptions! Ask: Does this add cognitive load? Is there a simpler pattern? What happens when network/API fails? How does it look on mobile?
-2. Pragmatic & Concise: Keep answers under 3-4 short punchy paragraphs with bullet points. Joey is on iPhone during a lull.
-3. Reference project conventions from the context files provided below.
+1. Collaborative & Socratic Sparring: Never be sarcastic, edgy, or cynical. Be constructive, encouraging, and sharp. Help Joe stress-test ideas by proactively exploring contrasting architectural trade-offs, mobile UX constraints, and edge cases.
+2. Subtractive & Lean (Via Negativa): Protect product simplicity and user focus. Challenge unnecessary complexity, state bloat, and battery/network drain.
+3. Concise & High-Craft: Keep replies concise (2-4 punchy paragraphs or structured bullet points). Joe is reviewing or brainstorming on his phone during a quick lull.
+4. Reference Context: Ground your thoughts directly in the target repository's existing rules and architecture from the context files provided below.
 
 Context:
 ${activeContext}`;
@@ -1291,6 +1297,42 @@ Include:
     fetchAvailableGeminiModels();
     if (CONFIG.githubPat) {
       loadRepoContextPills();
+    }
+
+    // App-wide Refresh & Cache Flush
+    const btnAppRefresh = document.getElementById('btnAppRefresh');
+    if (btnAppRefresh) {
+      btnAppRefresh.addEventListener('click', async () => {
+        btnAppRefresh.style.transition = 'transform 0.6s ease';
+        btnAppRefresh.style.transform = 'rotate(360deg)';
+        showAlert('Refreshing MMA to latest build...', true);
+
+        try {
+          // 1. Force service worker update
+          if ('serviceWorker' in navigator) {
+            const regs = await navigator.serviceWorker.getRegistrations();
+            for (const reg of regs) {
+              await reg.update();
+            }
+          }
+
+          // 2. Clear all cached app shells
+          if ('caches' in window) {
+            const keys = await caches.keys();
+            await Promise.all(keys.map(k => caches.delete(k)));
+          }
+
+          // 3. Clear transient dynamic caches
+          localStorage.removeItem('mma_cached_models');
+        } catch (err) {
+          console.warn('Cache clearing during refresh:', err);
+        }
+
+        // 4. Force reload from server
+        setTimeout(() => {
+          window.location.reload(true);
+        }, 350);
+      });
     }
 
     // Register Service Worker for PWA
